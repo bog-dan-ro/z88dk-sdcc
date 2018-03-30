@@ -182,7 +182,7 @@ external_definition
           allocVariables ($1);
           cleanUpLevel (SymbolTab, 1);
         }
-   | addressmod
+   | addressmod {}
    ;
 
 function_definition
@@ -1986,7 +1986,7 @@ labeled_statement
        werror(W_LABEL_WITHOUT_STATEMENT);
        $$ = $1;
        yychar = '}';
-     };
+     }
     ;
 
 label

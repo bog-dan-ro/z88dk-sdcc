@@ -482,20 +482,19 @@ _findProcessor (int argc, char **argv)
 /* printVersionInfo - prints the version info        */
 /*-----------------------------------------------------------------*/
 void
-printVersionInfo (FILE * stream)
+printVersionInfo(FILE * stream)
 {
-  int i;
+    int i;
 
-  fprintf (stream, "SDCC : ");
-  for (i = 0; i < NUM_PORTS; i++)
-    fprintf (stream, "%s%s", i == 0 ? "" : "/", _ports[i]->target);
-
-  fprintf (stream, " " SDCC_VERSION_STR
+    fprintf(stream, "\nZSDCC IS A MODIFICATION OF SDCC FOR Z88DK\n");
+    fprintf(stream, "Build: " SDCC_VERSION_STR
 #ifdef SDCC_SUB_VERSION_STR
-           "/" SDCC_SUB_VERSION_STR
+        "/" SDCC_SUB_VERSION_STR
 #endif
-           " #%s (%s)\n", getBuildNumber (), getBuildEnvironment ());
-  fprintf (stream, "published under GNU General Public License (GPL)\n");
+        " #%s (%s) " __DATE__ "\n\n", getBuildNumber(), getBuildEnvironment());
+    fprintf(stream, "sdcc website:\nhttps://sourceforge.net/projects/sdcc/\n\n");
+    fprintf(stream, "patch details:\nhttps://github.com/z88dk/z88dk/blob/master/libsrc/_DEVELOPMENT/sdcc_z88dk_patch.zip\n\n");
+    fprintf(stream, "published under GNU General Public License (GPL)\n");
 }
 
 static void

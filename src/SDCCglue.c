@@ -189,7 +189,7 @@ emitRegularMap (memmap * map, bool addPublics, bool arFlag)
            (sym->_isparm && !IS_REGPARM (sym->etype) && !IS_STATIC (sym->localof->etype))) &&
           addPublics &&
           !IS_STATIC (sym->etype) &&
-          (IS_FUNC (sym->type) ? (sym->used || IFFUNC_HASBODY (sym->type)) : (!IS_EXTERN (sym->etype) || sym->ival)) &&
+          (IS_FUNC (sym->type) ? (IFFUNC_HASBODY (sym->type)) : (!IS_EXTERN (sym->etype) || sym->ival)) &&
           !(IFFUNC_ISINLINE (sym->type) && !IS_STATIC (sym->etype) && !IS_EXTERN (sym->etype)))
         {
           addSetHead (&publics, sym);
@@ -365,11 +365,15 @@ emitRegularMap (memmap * map, bool addPublics, bool arFlag)
               emitDebugSym (&map->oBuf, sym);
               dbuf_printf (&map->oBuf, "==.\n");
             }
-          if (IS_STATIC (sym->etype) || sym->level)
-            dbuf_tprintf (&map->oBuf, "!slabeldef\n", sym->rname);
-          else
-            dbuf_tprintf (&map->oBuf, "!labeldef\n", sym->rname);
-          dbuf_tprintf (&map->oBuf, "\t!ds\n", (unsigned int) size & 0xffff);
+          if (!IS_EXTERN (sym->etype))
+            {
+              if (IS_STATIC (sym->etype) || sym->level)
+                dbuf_tprintf (&map->oBuf, "!slabeldef\n", sym->rname);
+              else
+                dbuf_tprintf (&map->oBuf, "!labeldef\n", sym->rname);
+
+              dbuf_tprintf (&map->oBuf, "\t!ds\n", (unsigned int) size & 0xffff);
+            }
         }
 
       sym->ival = NULL;
@@ -1846,9 +1850,12 @@ emitStaticSeg (memmap *map, struct dbuf_s *oBuf)
   /* for all variables in this segment do */
   for (sym = setFirstItem (map->syms); sym; sym = setNextItem (map->syms))
     {
-      /* if it is "extern" then do nothing */
+      /* if it is "extern" then add to the extern table */
       if (IS_EXTERN (sym->etype) && !sym->ival)
-        continue;
+        {
+          addSetHead (&externs, sym);
+          continue;
+        }
 
       /* eliminate redundant __str_%d (generated in stringToSymbol(), SDCCast.c) */
       if (!isinSet (tmpSet, sym))
@@ -1920,13 +1927,15 @@ emitStaticSeg (memmap *map, struct dbuf_s *oBuf)
                   emitDebugSym (oBuf, sym);
                   dbuf_printf (oBuf, " == .\n");
                 }
-              dbuf_printf (oBuf, "%s:\n", sym->rname);
               /* special case for character strings */
               if (IS_ARRAY (sym->type) &&
                 (IS_CHAR (sym->type->next) && SPEC_CVAL (sym->etype).v_char ||
                  IS_INT (sym->type->next) && !IS_LONG (sym->type->next) && SPEC_CVAL (sym->etype).v_char16 ||
                  IS_INT (sym->type->next) && IS_LONG (sym->type->next) && SPEC_CVAL (sym->etype).v_char32))
                 {
+                  if (options.const_seg)
+                     dbuf_tprintf(&code->oBuf, "\t!area\n", options.const_seg);
+                  dbuf_printf (oBuf, "%s:\n", sym->rname);
                   if (IS_CHAR (sym->type->next))
                     printChar (oBuf, SPEC_CVAL (sym->etype).v_char, size);
                   else if (IS_INT (sym->type->next) && !IS_LONG (sym->type->next))
@@ -1935,9 +1944,12 @@ emitStaticSeg (memmap *map, struct dbuf_s *oBuf)
                     printChar32 (oBuf, SPEC_CVAL (sym->etype).v_char32, size / 4);
                   else
                     wassert (0);
+                  if (options.const_seg)
+                     dbuf_tprintf(oBuf, "\t!areacode\n", options.code_seg);
                 }
               else
                 {
+                  dbuf_printf (oBuf, "%s:\n", sym->rname);
                   dbuf_tprintf (oBuf, "\t!ds\n", (unsigned int) size & 0xffff);
                 }
             }
@@ -2021,7 +2033,11 @@ emitMaps (void)
 void
 flushStatics (void)
 {
+  if (options.const_seg)
+      dbuf_tprintf (&code->oBuf, "\t!area\n", options.const_seg);
   emitStaticSeg (statsg, codeOutBuf);
+  if (options.const_seg)
+      dbuf_tprintf(&code->oBuf, "\t!areacode\n", options.code_seg);
   statsg->syms = NULL;
 }
 
